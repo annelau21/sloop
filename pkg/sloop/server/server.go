@@ -9,26 +9,14 @@ package server
 
 import (
 	"flag"
-	"os"
-	"path"
-	"strings"
-	"time"
-
 	"github.com/pkg/errors"
+	"os"
+	"strings"
 
+	"github.com/golang/glog"
 	"github.com/salesforce/sloop/pkg/sloop/ingress"
 	"github.com/salesforce/sloop/pkg/sloop/server/internal/config"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
-	"github.com/salesforce/sloop/pkg/sloop/store/untyped"
-
-	"github.com/golang/glog"
-
-	"github.com/spf13/afero"
-
-	"github.com/salesforce/sloop/pkg/sloop/processing"
-	"github.com/salesforce/sloop/pkg/sloop/store/untyped/badgerwrap"
-	"github.com/salesforce/sloop/pkg/sloop/storemanager"
-	"github.com/salesforce/sloop/pkg/sloop/webserver"
 )
 
 const alsologtostderr = "alsologtostderr"
@@ -54,46 +42,46 @@ func RealMain() error {
 	// The channel is owned by this function, and no external code should close this!
 	kubeWatchChan := make(chan typed.KubeWatchResult, 1000)
 
-	factory := &badgerwrap.BadgerFactory{}
+	//factory := &badgerwrap.BadgerFactory{}
+	//
+	//storeRootWithKubeContext := path.Join(conf.StoreRoot, kubeContext)
+	//storeConfig := &untyped.Config{
+	//	RootPath:                 storeRootWithKubeContext,
+	//	ConfigPartitionDuration:  time.Duration(1) * time.Hour,
+	//	BadgerMaxTableSize:       conf.BadgerMaxTableSize,
+	//	BadgerKeepL0InMemory:     conf.BadgerKeepL0InMemory,
+	//	BadgerVLogFileSize:       conf.BadgerVLogFileSize,
+	//	BadgerVLogMaxEntries:     conf.BadgerVLogMaxEntries,
+	//	BadgerUseLSMOnlyOptions:  conf.BadgerUseLSMOnlyOptions,
+	//	BadgerEnableEventLogging: conf.BadgerEnableEventLogging,
+	//	BadgerNumOfCompactors:    conf.BadgerNumOfCompactors,
+	//	BadgerNumL0Tables:        conf.BadgerNumL0Tables,
+	//	BadgerNumL0TablesStall:   conf.BadgerNumL0TablesStall,
+	//	BadgerSyncWrites:         conf.BadgerSyncWrites,
+	//	BadgerLevelOneSize:       conf.BadgerLevelOneSize,
+	//	BadgerLevSizeMultiplier:  conf.BadgerLevSizeMultiplier,
+	//	BadgerVLogFileIOMapping:  conf.BadgerVLogFileIOMapping,
+	//	BadgerVLogTruncate:       conf.BadgerVLogTruncate,
+	//	BadgerDetailLogEnabled:   conf.BadgerDetailLogEnabled,
+	//}
+	//db, err := untyped.OpenStore(factory, storeConfig)
+	//if err != nil {
+	//	return errors.Wrap(err, "failed to init untyped store")
+	//}
+	//defer untyped.CloseStore(db)
 
-	storeRootWithKubeContext := path.Join(conf.StoreRoot, kubeContext)
-	storeConfig := &untyped.Config{
-		RootPath:                 storeRootWithKubeContext,
-		ConfigPartitionDuration:  time.Duration(1) * time.Hour,
-		BadgerMaxTableSize:       conf.BadgerMaxTableSize,
-		BadgerKeepL0InMemory:     conf.BadgerKeepL0InMemory,
-		BadgerVLogFileSize:       conf.BadgerVLogFileSize,
-		BadgerVLogMaxEntries:     conf.BadgerVLogMaxEntries,
-		BadgerUseLSMOnlyOptions:  conf.BadgerUseLSMOnlyOptions,
-		BadgerEnableEventLogging: conf.BadgerEnableEventLogging,
-		BadgerNumOfCompactors:    conf.BadgerNumOfCompactors,
-		BadgerNumL0Tables:        conf.BadgerNumL0Tables,
-		BadgerNumL0TablesStall:   conf.BadgerNumL0TablesStall,
-		BadgerSyncWrites:         conf.BadgerSyncWrites,
-		BadgerLevelOneSize:       conf.BadgerLevelOneSize,
-		BadgerLevSizeMultiplier:  conf.BadgerLevSizeMultiplier,
-		BadgerVLogFileIOMapping:  conf.BadgerVLogFileIOMapping,
-		BadgerVLogTruncate:       conf.BadgerVLogTruncate,
-		BadgerDetailLogEnabled:   conf.BadgerDetailLogEnabled,
-	}
-	db, err := untyped.OpenStore(factory, storeConfig)
-	if err != nil {
-		return errors.Wrap(err, "failed to init untyped store")
-	}
-	defer untyped.CloseStore(db)
-
-	if conf.RestoreDatabaseFile != "" {
-		glog.Infof("Restoring from backup file %q into context %q", conf.RestoreDatabaseFile, kubeContext)
-		err := ingress.DatabaseRestore(db, conf.RestoreDatabaseFile)
-		if err != nil {
-			return errors.Wrap(err, "failed to restore database")
-		}
-		glog.Infof("Restored from backup file %q into context %q", conf.RestoreDatabaseFile, kubeContext)
-	}
-
-	tables := typed.NewTableList(db)
-	processor := processing.NewProcessing(kubeWatchChan, tables, conf.KeepMinorNodeUpdates, conf.MaxLookback)
-	processor.Start()
+	//if conf.RestoreDatabaseFile != "" {
+	//	glog.Infof("Restoring from backup file %q into context %q", conf.RestoreDatabaseFile, kubeContext)
+	//	err := ingress.DatabaseRestore(db, conf.RestoreDatabaseFile)
+	//	if err != nil {
+	//		return errors.Wrap(err, "failed to restore database")
+	//	}
+	//	glog.Infof("Restored from backup file %q into context %q", conf.RestoreDatabaseFile, kubeContext)
+	//}
+	//
+	//tables := typed.NewTableList(db)
+	//processor := processing.NewProcessing(kubeWatchChan, tables, conf.KeepMinorNodeUpdates, conf.MaxLookback)
+	//processor.Start()
 
 	// Real kubernetes watcher
 	var kubeWatcherSource ingress.KubeWatcher
@@ -109,60 +97,60 @@ func RealMain() error {
 		}
 	}
 
-	// File playback
-	if conf.DebugPlaybackFile != "" {
-		err = ingress.PlayFile(kubeWatchChan, conf.DebugPlaybackFile)
-		if err != nil {
-			return errors.Wrap(err, "failed to play back file")
-		}
-	}
+	//// File playback
+	//if conf.DebugPlaybackFile != "" {
+	//	err = ingress.PlayFile(kubeWatchChan, conf.DebugPlaybackFile)
+	//	if err != nil {
+	//		return errors.Wrap(err, "failed to play back file")
+	//	}
+	//}
+	//
+	//var recorder *ingress.FileRecorder
+	//if conf.DebugRecordFile != "" {
+	//	recorder = ingress.NewFileRecorder(conf.DebugRecordFile, kubeWatchChan)
+	//	recorder.Start()
+	//}
 
-	var recorder *ingress.FileRecorder
-	if conf.DebugRecordFile != "" {
-		recorder = ingress.NewFileRecorder(conf.DebugRecordFile, kubeWatchChan)
-		recorder.Start()
-	}
-
-	var storemgr *storemanager.StoreManager
-	if !conf.DisableStoreManager {
-		fs := &afero.Afero{Fs: afero.NewOsFs()}
-		storeCfg := &storemanager.Config{
-			StoreRoot:          conf.StoreRoot,
-			Freq:               conf.CleanupFrequency,
-			TimeLimit:          conf.MaxLookback,
-			SizeLimitBytes:     conf.MaxDiskMb * 1024 * 1024,
-			BadgerDiscardRatio: conf.BadgerDiscardRatio,
-			BadgerVLogGCFreq:   conf.BadgerVLogGCFreq,
-			DeletionBatchSize:  conf.DeletionBatchSize,
-			GCThreshold:        conf.ThresholdForGC,
-			EnableDeleteKeys:   conf.EnableDeleteKeys,
-		}
-		storemgr = storemanager.NewStoreManager(tables, storeCfg, fs)
-		storemgr.Start()
-	}
-
-	displayContext := kubeContext
-	if conf.DisplayContext != "" {
-		displayContext = conf.DisplayContext
-	}
-
-	webConfig := webserver.WebConfig{
-		BindAddress:      conf.BindAddress,
-		Port:             conf.Port,
-		WebFilesPath:     conf.WebFilesPath,
-		ConfigYaml:       conf.ToYaml(),
-		MaxLookback:      conf.MaxLookback,
-		DefaultNamespace: conf.DefaultNamespace,
-		DefaultLookback:  conf.DefaultLookback,
-		DefaultResources: conf.DefaultKind,
-		ResourceLinks:    conf.ResourceLinks,
-		LeftBarLinks:     conf.LeftBarLinks,
-		CurrentContext:   displayContext,
-	}
-	err = webserver.Run(webConfig, tables)
-	if err != nil {
-		return errors.Wrap(err, "failed to run webserver")
-	}
+	//var storemgr *storemanager.StoreManager
+	//if !conf.DisableStoreManager {
+	//	fs := &afero.Afero{Fs: afero.NewOsFs()}
+	//	storeCfg := &storemanager.Config{
+	//		StoreRoot:          conf.StoreRoot,
+	//		Freq:               conf.CleanupFrequency,
+	//		TimeLimit:          conf.MaxLookback,
+	//		SizeLimitBytes:     conf.MaxDiskMb * 1024 * 1024,
+	//		BadgerDiscardRatio: conf.BadgerDiscardRatio,
+	//		BadgerVLogGCFreq:   conf.BadgerVLogGCFreq,
+	//		DeletionBatchSize:  conf.DeletionBatchSize,
+	//		GCThreshold:        conf.ThresholdForGC,
+	//		EnableDeleteKeys:   conf.EnableDeleteKeys,
+	//	}
+	//	storemgr = storemanager.NewStoreManager(tables, storeCfg, fs)
+	//	storemgr.Start()
+	//}
+	//
+	//displayContext := kubeContext
+	//if conf.DisplayContext != "" {
+	//	displayContext = conf.DisplayContext
+	//}
+	//
+	//webConfig := webserver.WebConfig{
+	//	BindAddress:      conf.BindAddress,
+	//	Port:             conf.Port,
+	//	WebFilesPath:     conf.WebFilesPath,
+	//	ConfigYaml:       conf.ToYaml(),
+	//	MaxLookback:      conf.MaxLookback,
+	//	DefaultNamespace: conf.DefaultNamespace,
+	//	DefaultLookback:  conf.DefaultLookback,
+	//	DefaultResources: conf.DefaultKind,
+	//	ResourceLinks:    conf.ResourceLinks,
+	//	LeftBarLinks:     conf.LeftBarLinks,
+	//	CurrentContext:   displayContext,
+	//}
+	//err = webserver.Run(webConfig, tables)
+	//if err != nil {
+	//	return errors.Wrap(err, "failed to run webserver")
+	//}
 
 	// Initiate shutdown with the following order:
 	// 1. Shut down ingress so that it stops emitting events
@@ -172,15 +160,15 @@ func RealMain() error {
 		kubeWatcherSource.Stop()
 	}
 	close(kubeWatchChan)
-	processor.Wait()
-
-	if recorder != nil {
-		recorder.Close()
-	}
-
-	if storemgr != nil {
-		storemgr.Shutdown()
-	}
+	//processor.Wait()
+	//
+	//if recorder != nil {
+	//	recorder.Close()
+	//}
+	//
+	//if storemgr != nil {
+	//	storemgr.Shutdown()
+	//}
 
 	glog.Infof("RunWithConfig finished")
 	return nil

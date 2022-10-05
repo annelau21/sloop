@@ -9,14 +9,14 @@ package server
 
 import (
 	"flag"
-	"github.com/pkg/errors"
-	"os"
-	"strings"
-
+	"fmt"
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 	"github.com/salesforce/sloop/pkg/sloop/ingress"
 	"github.com/salesforce/sloop/pkg/sloop/server/internal/config"
 	"github.com/salesforce/sloop/pkg/sloop/store/typed"
+	"os"
+	"strings"
 )
 
 const alsologtostderr = "alsologtostderr"
@@ -69,7 +69,7 @@ func RealMain() error {
 	//	return errors.Wrap(err, "failed to init untyped store")
 	//}
 	//defer untyped.CloseStore(db)
-
+	//
 	//if conf.RestoreDatabaseFile != "" {
 	//	glog.Infof("Restoring from backup file %q into context %q", conf.RestoreDatabaseFile, kubeContext)
 	//	err := ingress.DatabaseRestore(db, conf.RestoreDatabaseFile)
@@ -83,21 +83,58 @@ func RealMain() error {
 	//processor := processing.NewProcessing(kubeWatchChan, tables, conf.KeepMinorNodeUpdates, conf.MaxLookback)
 	//processor.Start()
 
+	manyInserts := false
+	listOfKubeContextMap := map[string]string{"ast-sam": "https://pseudo-kubeapi.sfproxy.core3.test1-uswest2.aws.sfdc.cl/ast-sam/",
+		"aws-dev2-uswest2-apiq-sam-processing1":               "https://pseudo-kubeapi.sfproxy.core3.test1-uswest2.aws.sfdc.cl/aws-dev2-uswest2-apiq-sam-processing1/",
+		"aws-dev2-uswest2-apiq-sam-restricted1":               "https://pseudo-kubeapi.sfproxy.core3.test1-uswest2.aws.sfdc.cl/aws-dev2-uswest2-apiq-sam-restricted1/",
+		"aws-dev2-uswest2-ast-sam-processing1":                "https://pseudo-kubeapi.sfproxy.core3.test1-uswest2.aws.sfdc.cl/aws-dev2-uswest2-ast-sam-processing1/",
+		"aws-dev2-uswest2-ast-sfci-gec1":                      "https://pseudo-kubeapi.sfproxy.core3.test1-uswest2.aws.sfdc.cl/aws-dev2-uswest2-ast-sfci-gec1/",
+		"aws-dev2-uswest2-ast-sfci-gecteam1":                  "https://pseudo-kubeapi.sfproxy.core3.test1-uswest2.aws.sfdc.cl/aws-dev2-uswest2-ast-sfci-gecteam1/",
+		"aws-dev2-uswest2-ast-sfci-release1":                  "https://pseudo-kubeapi.sfproxy.core3.test1-uswest2.aws.sfdc.cl/aws-dev2-uswest2-ast-sfci-release1/",
+		"aws-dev2-uswest2-ast-sfci-team1":                     "https://pseudo-kubeapi.sfproxy.core3.test1-uswest2.aws.sfdc.cl/aws-dev2-uswest2-ast-sfci-team1/",
+		"aws-dev2-uswest2-buildndeliver-armada2":              "https://pseudo-kubeapi.sfproxy.core3.test1-uswest2.aws.sfdc.cl/aws-dev2-uswest2-buildndeliver-armada2/",
+		"aws-dev2-uswest2-cdp1-cdp-dev2-1":                    "https://pseudo-kubeapi.sfproxy.core3.test1-uswest2.aws.sfdc.cl/aws-dev2-uswest2-cdp1-cdp-dev2-1/",
+		"aws-dev2-uswest2-controltelemetry-fsre-shared-eks1":  "https://pseudo-kubeapi.sfproxy.core3.test1-uswest2.aws.sfdc.cl/aws-dev2-uswest2-controltelemetry-fsre-shared-eks1/",
+		"aws-dev2-uswest2-controltelemetry-sam-processing1":   "https://pseudo-kubeapi.sfproxy.core3.test1-uswest2.aws.sfdc.cl/aws-dev2-uswest2-controltelemetry-sam-processing1/",
+		"aws-dev2-uswest2-dp-services-sam-processing1":        "https://pseudo-kubeapi.sfproxy.core3.test1-uswest2.aws.sfdc.cl/aws-dev2-uswest2-dp-services-sam-processing1/",
+		"aws-dev2-uswest2-foundation-fsre-shared-eks2":        "https://pseudo-kubeapi.sfproxy.core3.test1-uswest2.aws.sfdc.cl/aws-dev2-uswest2-foundation-fsre-shared-eks2/",
+		"aws-dev2-uswest2-foundation-sam-logging-monitoring1": "https://pseudo-kubeapi.sfproxy.core3.test1-uswest2.aws.sfdc.cl/aws-dev2-uswest2-foundation-sam-logging-monitoring1/",
+		"aws-dev2-uswest2-foundation-sam-processing1":         "https://pseudo-kubeapi.sfproxy.core3.test1-uswest2.aws.sfdc.cl/aws-dev2-uswest2-foundation-sam-processing1/",
+		"aws-dev2-uswest2-messagingjourneys1-sam-processing1": "https://pseudo-kubeapi.sfproxy.core3.test1-uswest2.aws.sfdc.cl/aws-dev2-uswest2-messagingjourneys1-sam-processing1/",
+		"aws-dev2-uswest2-messagingjourneys1-sam-processing2": "https://pseudo-kubeapi.sfproxy.core3.test1-uswest2.aws.sfdc.cl/aws-dev2-uswest2-messagingjourneys1-sam-processing2/"}
 	// Real kubernetes watcher
 	var kubeWatcherSource ingress.KubeWatcher
 	if !conf.DisableKubeWatcher {
-		kubeClient, err := ingress.MakeKubernetesClient(conf.ApiServerHost, kubeContext, conf.PrivilegedAccess)
-		if err != nil {
-			return errors.Wrap(err, "failed to create kubernetes client")
+		if !manyInserts {
+			kubeClient, err := ingress.MakeKubernetesClient(conf.ApiServerHost, kubeContext, conf.PrivilegedAccess)
+			if err != nil {
+				return errors.Wrap(err, "failed to create kubernetes client")
+			}
+
+			kubeWatcherSource, err = ingress.NewKubeWatcherSource(kubeClient, kubeWatchChan, conf.KubeWatchResyncInterval, conf.WatchCrds, conf.CrdRefreshInterval, conf.ApiServerHost, kubeContext, conf.EnableGranularMetrics)
+			if err != nil {
+				return errors.Wrap(err, "failed to initialize kubeWatcher")
+			}
 		}
 
-		kubeWatcherSource, err = ingress.NewKubeWatcherSource(kubeClient, kubeWatchChan, conf.KubeWatchResyncInterval, conf.WatchCrds, conf.CrdRefreshInterval, conf.ApiServerHost, kubeContext, conf.EnableGranularMetrics)
-		if err != nil {
-			return errors.Wrap(err, "failed to initialize kubeWatcher")
+		if manyInserts {
+			for kC, masterURL := range listOfKubeContextMap {
+				fmt.Sprintf("kubeContext is %v", kC)
+				kubeClient, err := ingress.MakeKubernetesClient(masterURL, kC, false)
+				if err != nil {
+					return errors.Wrap(err, "failed to create kubernetes client")
+				}
+
+				kubeWatcherSource, err = ingress.NewKubeWatcherSource(kubeClient, kubeWatchChan, conf.KubeWatchResyncInterval, conf.WatchCrds, conf.CrdRefreshInterval, masterURL, kC, conf.EnableGranularMetrics)
+				if err != nil {
+					return errors.Wrap(err, "failed to initialize kubeWatcher")
+				}
+			}
 		}
+
 	}
 
-	//// File playback
+	////File playback
 	//if conf.DebugPlaybackFile != "" {
 	//	err = ingress.PlayFile(kubeWatchChan, conf.DebugPlaybackFile)
 	//	if err != nil {
@@ -110,7 +147,7 @@ func RealMain() error {
 	//	recorder = ingress.NewFileRecorder(conf.DebugRecordFile, kubeWatchChan)
 	//	recorder.Start()
 	//}
-
+	//
 	//var storemgr *storemanager.StoreManager
 	//if !conf.DisableStoreManager {
 	//	fs := &afero.Afero{Fs: afero.NewOsFs()}

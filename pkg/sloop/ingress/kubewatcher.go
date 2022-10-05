@@ -123,7 +123,7 @@ func (i *kubeWatcherImpl) startWellKnownInformers(kubeclient kubernetes.Interfac
 }
 
 func (i *kubeWatcherImpl) startCustomInformers(masterURL string, kubeContext string, enableGranularMetrics bool) error {
-
+	glog.Infof("masterURL: %v and kubeContext %v", masterURL, kubeContext)
 	clientCfg := getConfig(masterURL, kubeContext)
 	kubeCfg, err := clientCfg.ClientConfig()
 	if err != nil {

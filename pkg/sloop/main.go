@@ -13,6 +13,7 @@ import (
 	"github.com/salesforce/sloop/pkg/sloop/server"
 	"os"
 	"runtime/pprof"
+	"strconv"
 )
 
 var cpuprofile = flag.String("cpuprofile", "", "write profile to file")
@@ -26,12 +27,21 @@ func main() {
 		pprof.StartCPUProfile(f)
 		defer pprof.StopCPUProfile()
 	}
-	err := server.RealMain()
+
+	intVar, _ := strconv.Atoi(os.Args[2])
+	var err error
+	manyInserts := true
+	if manyInserts {
+		err = server.RealMain2(intVar)
+	} else {
+		err = server.RealMain()
+	}
+
 	if err != nil {
 		glog.Errorf("Main exited with error: %v\n", err)
-		os.Exit(1)
+		//os.Exit(1)
 	} else {
 		glog.Infof("Shutting down gracefully")
-		os.Exit(0)
+		//os.Exit(0)
 	}
 }
